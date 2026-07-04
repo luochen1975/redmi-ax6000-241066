@@ -33,6 +33,8 @@ env:
 jobs:
   build:
     runs-on: ubuntu-22.04
+    # 新增：整个 Job 超时设为 6 小时（GitHub Actions 免费版上限）
+    timeout-minutes: 360
     permissions:
       contents: write
       actions: write
@@ -114,11 +116,10 @@ jobs:
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P2_SH
 
-
     - name: Start SSH via tmate
       uses: P3TERX/ssh2actions@main
-
-    
+      # 新增：给 tmate 单独 30 分钟调试时间，防止 Step 超时导致取消
+      timeout-minutes: 30
 
     - name: Download package
       id: package
