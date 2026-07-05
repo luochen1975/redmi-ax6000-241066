@@ -129,11 +129,18 @@ jobs:
         cd openwrt
         echo -e "$(nproc) thread compile"
         make -j$(nproc) || make -j1 V=s
-        # 检查是否真的生成了固件
-        if [ ! -f bin/targets/*/*/*.img.gz ] && [ ! -f bin/targets/*/*/*.bin ]; then
-          echo "Compile failed or no firmware output!"
+        
+        if [ ! -d "bin/targets" ]; then
+          echo "Error: bin/targets directory does not exist!"
           exit 1
         fi
+        
+        FIRMWARE_FILES=$(find bin/targets -type f \( -name "*.img.gz" -o -name "*.bin" -o -name "*.itb" -o -name "*.trx" \))
+        if [ -z "$FIRMWARE_FILES" ]; then
+          echo "Error: No firmware output found!"
+          exit 1
+        fi
+        
         echo "status=success" >> $GITHUB_OUTPUT
         grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' | head -n 1 > DEVICE_NAME
         if [ -s DEVICE_NAME ]; then
@@ -159,16 +166,20 @@ jobs:
 
     - name: Organize files
       id: organize
-      if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
+      if: steps.compile.outputs.status == 'success' && env.UPLOAD_FIRMWARE == 'true' && !cancelled()
       run: |
-        # 使用 find 自动定位，不依赖硬编码路径
-        FIRMWARE_PATH=$(find openwrt/bin/targets -type f \( -name "*.img.gz" -o -name "*.bin" \) | head -n 1 | xargs -r dirname)
-        if [ -z "$FIRMWARE_PATH" ]; then
-          echo "Error: No firmware files found!"
-          ls -laR openwrt/bin/ 2>/dev/null || true
+        cd openwrt
+        if [ ! -d "bin/targets" ]; then
+          echo "Error: bin/targets not found!"
+          ls -la bin/ 2>/dev/null || true
           exit 1
         fi
-        echo "FIRMWARE_PATH=$FIRMWARE_PATH" >> $GITHUB_ENV
+        FIRMWARE_PATH=$(find bin/targets -type f \( -name "*.img.gz" -o -name "*.bin" -o -name "*.itb" -o -name "*.trx" \) | head -n 1 | xargs -r dirname)
+        if [ -z "$FIRMWARE_PATH" ]; then
+          echo "Error: No firmware files found!"
+          exit 1
+        fi
+        echo "FIRMWARE_PATH=$FIRMWARE_PATH" >> $GITHUB_OUTPUT
         echo "status=success" >> $GITHUB_OUTPUT
 
     - name: Upload firmware directory
@@ -176,7 +187,7 @@ jobs:
       if: steps.organize.outputs.status == 'success' && !cancelled()
       with:
         name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
-        path: ${{ env.FIRMWARE }}
+        path: ${{ env.FIRMWARE_PATH }}
 
     - name: Generate release tag
       id: tag
