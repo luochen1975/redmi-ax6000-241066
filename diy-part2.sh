@@ -18,3 +18,5 @@ sed -i 's/192.168.1.1/192.168.6.1/g' package/base-files/files/bin/config_generat
 
 # Modify hostname
 #sed -i 's/OpenWrt/P3TERX-Router/g' package/base-files/files/bin/config_generate
+sed -i '/passwall2/d' /etc/opkg/distfeeds.conf
+sed -i '/mirrors.vsean.net.*passwall/d' /etc/opkg/distfeeds.conf
