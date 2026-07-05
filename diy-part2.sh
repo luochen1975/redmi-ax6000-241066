@@ -20,3 +20,10 @@ sed -i 's/192.168.1.1/192.168.6.1/g' package/base-files/files/bin/config_generat
 #sed -i 's/OpenWrt/P3TERX-Router/g' package/base-files/files/bin/config_generate
 sed -i '/passwall2/d' /etc/opkg/distfeeds.conf
 sed -i '/mirrors.vsean.net.*passwall/d' /etc/opkg/distfeeds.conf
+
+# 阻止 opkg 升级核心系统包（防止覆盖 MTK 补丁）
+sed -i '/base-files/d' /etc/opkg/distfeeds.conf
+sed -i '/libubox/d' /etc/opkg/distfeeds.conf
+sed -i '/libucode/d' /etc/opkg/distfeeds.conf
+sed -i '/ucode/d' /etc/opkg/distfeeds.conf
+sed -i '/jshn/d' /etc/opkg/distfeeds.conf
