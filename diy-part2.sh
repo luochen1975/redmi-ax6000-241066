@@ -18,7 +18,8 @@ sed -i 's/192.168.1.1/192.168.6.1/g' package/base-files/files/bin/config_generat
 
 # Modify hostname
 #sed -i 's/OpenWrt/P3TERX-Router/g' package/base-files/files/bin/config_generate
-sed -i '/passwall2/d' /etc/opkg/distfeeds.conf
+sed -i '/passwall2/d' package/base-files/files/etc/opkg/distfeeds.conf
+sed -i '/mirrors.vsean.net.*passwall/d' package/base-files/files/etc/opkg/distfeeds.conf
 sed -i '/mirrors.vsean.net.*passwall/d' /etc/opkg/distfeeds.conf
 
 # 阻止 opkg 升级核心系统包（防止覆盖 MTK 补丁）
