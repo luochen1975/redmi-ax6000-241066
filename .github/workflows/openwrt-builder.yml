@@ -128,11 +128,22 @@ jobs:
       run: |
         cd openwrt
         echo -e "$(nproc) thread compile"
-        make -j$(nproc) || make -j1 || make -j1 V=s
+        make -j$(nproc) || make -j1 V=s
+        # 检查是否真的生成了固件
+        if [ ! -f bin/targets/*/*/*.img.gz ] && [ ! -f bin/targets/*/*/*.bin ]; then
+          echo "Compile failed or no firmware output!"
+          exit 1
+        fi
         echo "status=success" >> $GITHUB_OUTPUT
-        # 修复：精确匹配 CONFIG_TARGET_DEVICE_ 开头，排除 PER_DEVICE_ROOTFS 等干扰
-        DEVICE_NAME=$(grep '^CONFIG_TARGET_DEVICE_.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' | head -n 1)
-        [ -n "$DEVICE_NAME" ] && echo "DEVICE_NAME=_${DEVICE_NAME}" >> $GITHUB_ENV
+        grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' | head -n 1 > DEVICE_NAME
+        if [ -s DEVICE_NAME ]; then
+          DEVICE_NAME_VALUE=$(cat DEVICE_NAME | tr '-' '_' | tr -d '\n\r')
+          {
+            echo 'DEVICE_NAME<<EOF'
+            echo "_${DEVICE_NAME_VALUE}"
+            echo 'EOF'
+          } >> $GITHUB_ENV
+        fi
         echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
 
     - name: Check space usage
@@ -150,9 +161,14 @@ jobs:
       id: organize
       if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
       run: |
-        cd openwrt/bin/targets/*/*
-        rm -rf packages
-        echo "FIRMWARE=$PWD" >> $GITHUB_ENV
+        # 使用 find 自动定位，不依赖硬编码路径
+        FIRMWARE_PATH=$(find openwrt/bin/targets -type f \( -name "*.img.gz" -o -name "*.bin" \) | head -n 1 | xargs -r dirname)
+        if [ -z "$FIRMWARE_PATH" ]; then
+          echo "Error: No firmware files found!"
+          ls -laR openwrt/bin/ 2>/dev/null || true
+          exit 1
+        fi
+        echo "FIRMWARE_PATH=$FIRMWARE_PATH" >> $GITHUB_ENV
         echo "status=success" >> $GITHUB_OUTPUT
 
     - name: Upload firmware directory
