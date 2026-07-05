@@ -188,14 +188,17 @@ jobs:
         echo "status=success" >> $GITHUB_OUTPUT
 
     - name: Upload firmware to release
+      if: steps.compile.outputs.status == 'success' && env.UPLOAD_RELEASE == 'true' && !cancelled()
       uses: softprops/action-gh-release@v2
-      if: steps.tag.outputs.status == 'success' && !cancelled()
+      with:
+        tag_name: OpenWrt-${{ env.FILE_DATE }}
+        name: OpenWrt ${{ env.FILE_DATE }}
+        body: |
+          - Device: ${{ env.DEVICE_NAME }}
+          - Date: ${{ env.FILE_DATE }}
+        files: ${{ env.FIRMWARE_PATH }}/*
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ steps.tag.outputs.release_tag }}
-        body_path: release.txt
-        files: ${{ env.FIRMWARE }}/*
 
     - name: Delete workflow runs
       uses: Mattraks/delete-workflow-runs@v2
